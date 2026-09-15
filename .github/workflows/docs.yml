@@ -32,6 +32,12 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Pages defaults to disabled, so on a fresh repository, a fork, or a
+          # repository recreated from scratch the action fails with
+          # "Get Pages site failed" before it ever reaches the deploy step.
+          # This lets the workflow configure Pages itself.
+          enablement: true
 
       - name: Upload portal
         uses: actions/upload-pages-artifact@v3
