@@ -219,6 +219,10 @@ __marimo__/
 logs/
 .vscode/
 outputs/
+# Anchored to the repo root only: `data/` and `models/` without a leading slash
+# would also match src/approach/unetbasic/{data,models}/, which are tracked.
+/data/
+/models/
 
 *.parquet
 *.pq
@@ -226,6 +230,12 @@ outputs/
 *.tiff
 *.csv
 *.npy
+# Model weights and checkpoints: never publish these (hundreds of MB, and the
+# Makefile defaults to models/<run>/checkpoint-* as a local path).
+*.pth
+*.pt
+*.ckpt
+*.safetensors
 *.zip
 topological-metrics-kaggle/
 # Deprecated documentation (superseded by docs/repo-overview/)
