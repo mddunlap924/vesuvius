@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deployment &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="Where a run writes its artifacts, how to resume and reproduce, how predictions reach the leaderboard, and how this documentation portal is published.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="../assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link" href="../index.html">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link" href="../architecture/index.html">Overview</a>
+<a class="nav__link" href="../architecture/system.html">System Design</a>
+<a class="nav__link" href="../architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="../architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link" href="../ai/index.html">Overview</a>
+<a class="nav__link" href="../ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="../ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="../ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link" href="../development/index.html">Overview</a>
+<a class="nav__link" href="../development/getting-started.html">Getting Started</a>
+<a class="nav__link" href="../development/project-structure.html">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link" href="../operations/index.html">Overview</a>
+<a class="nav__link is-active" href="../operations/deployment.html" aria-current="page">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">Deployment</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="breadcrumb__sep">/</span><a href="../operations/index.html">Operations</a><span class="breadcrumb__sep">/</span><span>Deployment</span></nav>
+<h1>Deployment</h1>
+<p class="page-lede">Where a run writes its artifacts, how to resume and reproduce, how predictions reach the leaderboard, and how this documentation portal is published.</p>
+<div class="toc" data-toc hidden></div>
+
+<h2 id="execution-environments">1. Execution environments</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Environment</th><th>Used for</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Multi-GPU workstation</strong></td>
+      <td>Training both pipelines at full scale.</td>
+      <td>
+        The default training path. Needs the full environment, the converted dataset on fast local
+        storage, and enough VRAM for the configured patch size.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Single-GPU machine</strong></td>
+      <td>Inference, evaluation, prototyping, post-processing sweeps.</td>
+      <td>
+        Training still runs, at a smaller patch size or with fewer epochs; scoring is CPU-bound and
+        needs no GPU at all.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Kaggle notebook</strong></td>
+      <td>Submission-time inference.</td>
+      <td>
+        Runs the published inference dataset rather than the full repository, so the code that must be
+        available there is packaged explicitly.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="output-layout">2. Output layout</h2>
+
+<p>
+  A run is identified by its approach and experiment, and every artifact it produces lands under that
+  pair:
+</p>
+
+<pre><code>outputs/
+└── &lt;approach&gt;/
+    └── &lt;experiment&gt;/
+        ├── results/     checkpoints written during training
+        ├── wandb/       local tracking logs for the run
+        └── hydra/       the resolved configuration actually used</code></pre>
+
+<p>
+  The <code>hydra/</code> directory is the most valuable of the three when reproducing a result: it
+  contains the fully resolved configuration, after the shared base and the experiment file have been
+  composed. Two runs can be compared by diffing those two files alone, without reconstructing which
+  overrides were passed on the command line.
+</p>
+
+<p>
+  Prediction artifacts are written wherever the inference run is pointed, conventionally outside the
+  repository on the same fast storage:
+</p>
+
+<pre><code>&lt;inference_output&gt;/
+├── probabilities/&lt;case_id&gt;.npy     foreground probability per case
+├── distance_preds/&lt;case_id&gt;.npy    predicted distance field per case
+└── metadata                        ties each prediction back to its source case</code></pre>
+
+<h2 id="checkpoints">3. Checkpoints and resume</h2>
+
+<p>
+  Checkpoints are written periodically during training rather than only at the end, at a cadence
+  controlled by the experiment configuration. Two consequences shape day-to-day practice:
+</p>
+
+<ul>
+  <li>
+    <strong>Intermediate models are usable.</strong> A checkpoint from partway through a run can be
+    loaded for inference directly, which is how the effect of training duration is assessed without
+    waiting for a full run to finish.
+  </li>
+  <li>
+    <strong>A long run is recoverable.</strong> If a job is interrupted, the most recent checkpoint is
+    a valid starting point rather than a total loss.
+  </li>
+</ul>
+
+<p>
+  Because each experiment writes into its own directory, changing the experiment name is the safe way
+  to start a new run alongside an existing one; runs cannot overwrite each other&rsquo;s checkpoints.
+</p>
+
+<h2 id="experiment-tracking">4. Experiment tracking</h2>
+
+<p>
+  Training reports to Weights &amp; Biases. What is reported falls into three groups:
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Group</th><th>Contents</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Configuration</strong></td>
+      <td>
+        The resolved configuration for the run, so the dashboard entry is self-describing rather than
+        needing the YAML to interpret.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Training signal</strong></td>
+      <td>
+        The loss and its components over time, plus learning rate and throughput. Watching individual
+        loss components is how the loss-weight curriculum is verified to be doing what it was
+        configured to do.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Validation signal</strong></td>
+      <td>
+        Derived aggregate metrics from the periodic sliding-window validation pass.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Tracking mode is a configuration setting: it can run online, buffer locally and sync later, or be
+  disabled entirely. Offline mode is the pragmatic choice when training on a machine without outbound
+  network access, or when sweeping many short runs that would otherwise clutter the project.
+</p>
+
+<p class="note">
+  <span class="note__title">Training metrics are progress indicators, not the competition score</span>
+  The metrics reported during training are computed from validation tensors, so they run on every
+  validation round without waiting for prediction volumes to be written. The authoritative
+  competition score is produced separately, from stored predictions, through the scoring path
+  described in <a href="../ai/evaluation.html">Evaluation &amp; Metrics</a>. Use the first to steer a
+  run; use the second to make a claim.
+</p>
+
+<h2 id="kaggle-packaging">5. Kaggle packaging and submission</h2>
+
+<p>
+  Submission-time inference runs in Kaggle&rsquo;s notebook environment, which has no access to this
+  repository. The necessary slice of the code is therefore published as a Kaggle dataset, and the
+  competition notebook consumes it.
+</p>
+
+<pre><code>exploration/scoring/
+ ├── nnunet_inference/            partitioned multi-GPU predictor
+ ├── post_processing_probs.py     post-processing dispatch
+ ├── postprocess_ribbons.py       ribbon / continuity strategies
+ └── analyze_prediction_*.py      prediction analysis helpers
+        │
+        │  Makefile target: package-nnunet-dataset
+        ↓
+kaggle_datasets/inference/          published package
+        │
+        │  kaggle datasets version
+        ↓
+Kaggle dataset  →  competition notebook  →  submission</code></pre>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Step</th><th>What happens</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Select the code</strong></td>
+      <td>
+        Only the inference driver, the post-processing modules it depends on and the analysis helpers
+        are packaged. Training code, datasets and checkpoints are not.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Copy into the package</strong></td>
+      <td>
+        The <code>Makefile</code> target performs the copies, which makes the published contents
+        explicit and reviewable in one place rather than decided at upload time.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Publish a version</strong></td>
+      <td>
+        The dataset is versioned on Kaggle with a message describing the change, so a notebook can pin
+        the version it was validated against.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Run inference</strong></td>
+      <td>
+        The notebook loads the dataset, runs the partitioned predictor against the competition inputs
+        and exports per-case label volumes as TIFF.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Generate the submission</strong></td>
+      <td>
+        TIFF export is a separate step from prediction, so a failed export can be retried without
+        repeating inference.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p class="note note--warn">
+  <span class="note__title">The package is a copy, so it can drift</span>
+  Because the packaged files are copies of files under <code>exploration/scoring/</code>, the two can
+  diverge if the source is edited without republishing. Treat the <code>Makefile</code> target as the
+  only supported way to update the package, and republish immediately after changing any of the
+  source modules it copies. Diffing the two locations is a quick way to confirm they agree.
+</p>
+
+<h2 id="reproducibility">6. Reproducibility</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>To reproduce</th><th>You need</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>A run</strong></td>
+      <td>
+        The commit, the lockfile at that commit, and the resolved configuration from the run&rsquo;s
+        <code>hydra/</code> directory.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>A split</strong></td>
+      <td>
+        The seed from the configuration. Splits are seeded, so the same seed and dataset produce the
+        same held-out cases.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>A score</strong></td>
+      <td>
+        The stored predictions, the threshold, and the post-processing strategy name. Because scoring
+        is a pure function of those three, a reported score can be re-derived without a GPU.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>An nnU-Net result</strong></td>
+      <td>
+        The plans file checked into <code>docs/</code>, which pins the configuration the framework
+        selected.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="publishing-the-docs">7. Publishing this documentation</h2>
+
+<p>
+  This portal is plain static HTML with no build step, which makes publication trivial: the contents
+  of <code>docs/repo-overview/</code> are the site. A GitHub Actions workflow publishes that directory
+  as the Pages artifact on every push to the default branch.
+</p>
+
+<pre><code>docs/repo-overview/
+├── index.html                    front door
+├── .nojekyll                     tells Pages to serve files as-is
+├── assets/
+│   ├── css/style.css             shared stylesheet
+│   ├── js/site.js                navigation, theme, table of contents, copy buttons
+│   └── diagrams/                 diagram sources
+├── architecture/                 ┐
+├── ai/                           │ one directory per section
+├── development/                  │ each with its own index.html
+└── operations/                   ┘</code></pre>
+
+<p>
+  Three properties are worth preserving when editing the site:
+</p>
+
+<ul>
+  <li>
+    <strong>No build step.</strong> Pages are authored directly, so what you commit is what is served.
+    The cost is that the navigation block is repeated in every page &mdash; a change to the section
+    list has to be applied everywhere.
+  </li>
+  <li>
+    <strong>No external requests.</strong> Styles, scripts and diagrams are all local, so the site
+    works offline, renders identically in restricted networks, and prints cleanly.
+  </li>
+  <li>
+    <strong><code>.nojekyll</code> is required.</strong> Without it, Pages runs the content through
+    Jekyll, which can silently drop files whose names begin with an underscore.
+  </li>
+</ul>
+
+<h2 id="portability">8. Moving to a new machine</h2>
+
+<p>
+  When relocating the pipeline, these are the settings to review, roughly in the order they will bite:
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Setting</th><th>Why</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Data directory</td>
+      <td>Point the dataset at where the converted arrays actually live on the new machine.</td>
+    </tr>
+    <tr>
+      <td>Inference input, output and checkpoint paths</td>
+      <td>Pass these explicitly on the command line; do not rely on the built-in defaults.</td>
+    </tr>
+    <tr>
+      <td>Output root</td>
+      <td>Decide where checkpoints and prediction volumes go before starting a long run.</td>
+    </tr>
+    <tr>
+      <td>External metrics package</td>
+      <td>Must be installed into the environment separately from the lockfile install.</td>
+    </tr>
+    <tr>
+      <td>Worker and prefetch counts</td>
+      <td>Tuned for a specific core count; revisit if the dataloader becomes the bottleneck.</td>
+    </tr>
+    <tr>
+      <td>nnU-Net directories</td>
+      <td>Raw, preprocessed and results roots, if any stage is run standalone.</td>
+    </tr>
+    <tr>
+      <td>Tracking mode</td>
+      <td>Switch to offline or disabled if the machine has no outbound network access.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__prev" href="../operations/index.html"><span class="pager__dir">&larr; Previous</span><span class="pager__title">Operations</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="../index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

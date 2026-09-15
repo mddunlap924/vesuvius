@@ -1,0 +1,19 @@
+{
+  "title": "nnunetv2-inference",
+  "id": "your-kaggle-username/vesuvius-inference-code",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "resources": [
+    {
+      "path": "__init__.py",
+      "description": "Package initialization file"
+    },
+    {
+      "path": "inference_nnunet.py",
+      "description": "nnunetv2 inference pipeline implementation"
+    }
+  ]
+}

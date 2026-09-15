@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Structure &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="An annotated tour of the repository, how configuration layers resolve into a single run, and the conventions to follow when adding an experiment or a new approach.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="../assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link" href="../index.html">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link" href="../architecture/index.html">Overview</a>
+<a class="nav__link" href="../architecture/system.html">System Design</a>
+<a class="nav__link" href="../architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="../architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link" href="../ai/index.html">Overview</a>
+<a class="nav__link" href="../ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="../ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="../ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link" href="../development/index.html">Overview</a>
+<a class="nav__link" href="../development/getting-started.html">Getting Started</a>
+<a class="nav__link is-active" href="../development/project-structure.html" aria-current="page">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link" href="../operations/index.html">Overview</a>
+<a class="nav__link" href="../operations/deployment.html">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">Project Structure</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="breadcrumb__sep">/</span><a href="../development/index.html">Development</a><span class="breadcrumb__sep">/</span><span>Project Structure</span></nav>
+<h1>Project Structure</h1>
+<p class="page-lede">An annotated tour of the repository, how configuration layers resolve into a single run, and the conventions to follow when adding an experiment or a new approach.</p>
+<div class="toc" data-toc hidden></div>
+
+<h2 id="annotated-tree">1. Annotated tree</h2>
+
+<pre><code>vesuvius/
+├── configs/                          shared, approach-independent configuration
+│   ├── globals.yaml                  seed, output directory, defaults
+│   ├── data/base.yaml                dataset defaults
+│   └── wandb/wandb.yaml              experiment-tracking project and defaults
+│
+├── src/
+│   ├── approach/                     one directory per modelling approach
+│   │   └── unetbasic/                the active custom approach
+│   │       ├── train.py              training entry point and orchestration
+│   │       ├── inference.py          standalone sliding-window inference
+│   │       ├── data/dataset.py       transforms and the dataset
+│   │       ├── models/unet.py        network definitions
+│   │       ├── metrics/              competition metrics + post-processing
+│   │       ├── utils/                losses, loss-weight schedule, logging
+│   │       └── configs/experiments/  per-experiment YAML (e.g. exp_v0.yaml)
+│   └── utils/                        shared helpers (site metadata, logging)
+│
+├── scripts/                          standalone tools and the nnU-Net pipeline
+│   ├── nnunetbaseline/               full nnU-Net v2 driver
+│   ├── run_experiment.py             experiment launcher
+│   ├── queue_experiments.py          sequential experiment queue
+│   └── syn-data-generator*.py        synthetic training-data generation
+│
+├── exploration/                      local working area (not published)
+│   └── scoring/                      post-processing strategies and scoring harness
+│
+├── kaggle_datasets/inference/        code published as a Kaggle inference dataset
+├── tests/                            unit tests for the dataset, augmentation and losses
+├── docs/                             plans file + this documentation portal
+├── Makefile                          the three canonical command lines
+├── pyproject.toml / uv.lock          dependencies and the lockfile
+└── README.md                         the front door</code></pre>
+
+<h2 id="the-shape-of-the-tree">2. The shape of the tree</h2>
+
+<p>
+  Three boundaries in this layout do real work, and understanding them prevents most confusion:
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Boundary</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <strong><code>configs/</code> versus <code>src/approach/*/configs/</code></strong>
+      </td>
+      <td>
+        <code>configs/</code> holds settings shared by every approach. Each approach holds only what
+        is specific to one experiment. If a value belongs to all approaches, it goes in
+        <code>configs/</code>; if it distinguishes two runs, it goes under the approach.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong><code>src/</code> versus <code>scripts/</code></strong>
+      </td>
+      <td>
+        <code>src/</code> is importable package code, entered through its own modules.
+        <code>scripts/</code> holds runnable tools that orchestrate package code from the outside,
+        which is why the nnU-Net driver lives there rather than inside an approach.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong><code>exploration/</code> versus everything else</strong>
+      </td>
+      <td>
+        <code>exploration/</code> is where experiments that are not yet settled live. Code there
+        operates on stored predictions and artifacts rather than participating in the training loop,
+        so it can change freely without threatening reproducibility.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="configuration-layering">3. Configuration layering</h2>
+
+<p>
+  Configuration is composed from a shared base plus one experiment file. Precedence is strict and
+  predictable, so an experiment only needs to state what it changes:
+</p>
+
+<pre><code>configs/globals.yaml                          seed, output_dir, defaults
+configs/data/base.yaml                        data section defaults
+configs/wandb/wandb.yaml                      tracking project / entity / mode
+        &darr; composed with
+src/approach/&lt;approach&gt;/configs/experiments/&lt;experiment&gt;.yaml
+        = one resolved configuration per run</code></pre>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>File</th><th>Contains</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>configs/globals.yaml</code></td>
+      <td>
+        The random seed, the output directory root, the approach/experiment placeholders, and the
+        Hydra run directory setting that keeps outputs in one predictable place instead of timestamped
+        directories.
+      </td>
+    </tr>
+    <tr>
+      <td><code>configs/data/base.yaml</code></td>
+      <td>Dataset-level defaults: file naming, label semantics and spacing expectations.</td>
+    </tr>
+    <tr>
+      <td><code>configs/wandb/wandb.yaml</code></td>
+      <td>Tracking project name, entity and mode (online, offline or disabled).</td>
+    </tr>
+    <tr>
+      <td><code>.../configs/experiments/&lt;experiment&gt;.yaml</code></td>
+      <td>
+        Everything that distinguishes one run from another: split, patch size, augmentation set,
+        training hyperparameters, model size, loss hyperparameters and the loss-weight schedule.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  The experiment file is where essentially all tuning happens, and it separates two things that are
+  easy to conflate:
+</p>
+
+<ul>
+  <li>
+    <strong>Loss hyperparameters</strong> &mdash; the internal parameters of the loss classes, such as
+    the Tversky asymmetry or the expected sheet gap. These define how a component measures what it
+    measures.
+  </li>
+  <li>
+    <strong>Loss weights</strong> &mdash; how much each component contributes to the total. These are
+    set through the loss-weight schedule, which is what makes a weight able to change over the course
+    of a run.
+  </li>
+</ul>
+
+<p>
+  Keeping them separate is what allows a curriculum: the measurement stays fixed while its influence
+  ramps in.
+</p>
+
+<h2 id="conventions">4. Conventions</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Convention</th><th>Rationale</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>One directory per approach under <code>src/approach/</code></td>
+      <td>
+        Approaches are independent. Adding one means adding a directory, not modifying an existing
+        one, so experiments cannot interfere with each other.
+      </td>
+    </tr>
+    <tr>
+      <td>Experiment variation lives in YAML, not in code branches</td>
+      <td>A run is reproducible from its configuration, and two runs can be diffed as files.</td>
+    </tr>
+    <tr>
+      <td><code>PYTHONPATH</code> includes <code>src/</code></td>
+      <td>Approach packages are imported as <code>approach.&lt;name&gt;.&lt;module&gt;</code>.</td>
+    </tr>
+    <tr>
+      <td>Case identifiers are filename stems, everywhere</td>
+      <td>
+        The same identifier threads through data, predictions and reports, which is what makes a
+        reported metric traceable back to its input.
+      </td>
+    </tr>
+    <tr>
+      <td>Derived label tensors are produced by transforms, not stored on disk</td>
+      <td>
+        Distance fields are computed during loading at patch size, so the derived arrays stay
+        proportional to the patch rather than the volume.
+      </td>
+    </tr>
+    <tr>
+      <td>Outputs never live inside the repository</td>
+      <td>
+        Checkpoints, predictions and tracking logs go to the configured fast-storage root, keeping the
+        working tree clean and diffable.
+      </td>
+    </tr>
+    <tr>
+      <td>Post-processing operates on stored predictions</td>
+      <td>
+        It keeps the search over strategies cheap and makes every comparison run against identical
+        predictions.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="adding-an-experiment">5. Adding an experiment</h2>
+
+<p>
+  The intended workflow, using the existing approach:
+</p>
+
+<ol>
+  <li>
+    Copy an existing experiment YAML under
+    <code>src/approach/unetbasic/configs/experiments/</code> to a new name.
+  </li>
+  <li>
+    Change only what the experiment is about. Anything left out is inherited, which keeps the
+    experiment readable and its diff meaningful.
+  </li>
+  <li>
+    If the experiment introduces a new loss combination, express it as weights in the
+    loss-weight schedule rather than as a new loss class.
+  </li>
+  <li>
+    Launch it by name through the same entry point. A new name is a new output directory, so runs
+    cannot overwrite one another.
+  </li>
+  <li>
+    Compare against both the previous experiment and the nnU-Net baseline before drawing a
+    conclusion.
+  </li>
+</ol>
+
+<h2 id="adding-an-approach">6. Adding an approach</h2>
+
+<p>
+  A new approach is a new sibling directory under <code>src/approach/</code> containing the same
+  shape as the existing one &mdash; a training entry point, a dataset module, a models module, a
+  <code>utils/</code> package and its own <code>configs/experiments/</code>. Reuse the shared
+  <code>configs/</code> layer for anything not specific to the approach.
+</p>
+
+<p>
+  Before writing a second approach from scratch, check whether the change you want is compositional.
+  Most modelling ideas in this domain &mdash; a different loss weighting, a new auxiliary head, a
+  different stride pattern &mdash; are expressible within the existing approach as a configuration
+  change or a new class in the existing <code>models/</code> module. A new approach is justified when
+  the <em>data contract</em> changes, not merely the objective.
+</p>
+
+<h2 id="working-with-notebooks">7. Working with notebooks</h2>
+
+<p>
+  Exploratory notebooks are a legitimate part of the workflow rather than scratch space, but they
+  are <strong>working files and are not published with the repository</strong>: they embed
+  machine-specific paths and large executed outputs, so they stay in the local checkout. Two habits
+  keep them useful while they do:
+</p>
+
+<ul>
+  <li>
+    <strong>Notebooks consume artifacts, not training runs.</strong> Analysis reads stored
+    predictions and score reports, so it can be re-run cheaply and does not occupy a GPU.
+  </li>
+  <li>
+    <strong>Promote rather than fork.</strong> When analysis stabilises into something that should
+    run every time, move it into a module &mdash; a strategy in the scoring lab or a tool in
+    <code>scripts/</code> &mdash; rather than leaving it as the only copy inside a notebook.
+  </li>
+</ul>
+
+<h2 id="tests">8. Tests</h2>
+
+<p>
+  <code>tests/</code> contains unit tests covering the dataset contract, the augmentation
+  configuration and the loss implementations &mdash; the areas where a silent behavioural change is
+  hardest to spot from training metrics alone. They are the natural place to add coverage for a new
+  transform or a new loss component, since both are pure functions of tensors and can be checked
+  directly. Run them with <code>make test</code>.
+</p>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__prev" href="../development/getting-started.html"><span class="pager__dir">&larr; Previous</span><span class="pager__title">Getting Started</span></a><a class="pager__next" href="../operations/index.html"><span class="pager__dir">Next &rarr;</span><span class="pager__title">Operations</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="../index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

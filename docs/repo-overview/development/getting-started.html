@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting Started &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="Prerequisites, environment setup, the one external dependency, the expected data layout, and the commands for training, inference, scoring and the nnU-Net baseline.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="../assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link" href="../index.html">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link" href="../architecture/index.html">Overview</a>
+<a class="nav__link" href="../architecture/system.html">System Design</a>
+<a class="nav__link" href="../architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="../architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link" href="../ai/index.html">Overview</a>
+<a class="nav__link" href="../ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="../ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="../ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link" href="../development/index.html">Overview</a>
+<a class="nav__link is-active" href="../development/getting-started.html" aria-current="page">Getting Started</a>
+<a class="nav__link" href="../development/project-structure.html">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link" href="../operations/index.html">Overview</a>
+<a class="nav__link" href="../operations/deployment.html">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">Getting Started</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="breadcrumb__sep">/</span><a href="../development/index.html">Development</a><span class="breadcrumb__sep">/</span><span>Getting Started</span></nav>
+<h1>Getting Started</h1>
+<p class="page-lede">Prerequisites, environment setup, the one external dependency, the expected data layout, and the commands for training, inference, scoring and the nnU-Net baseline.</p>
+<div class="toc" data-toc hidden></div>
+
+<h2 id="prerequisites">1. Prerequisites</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Requirement</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Python 3.11+</strong></td>
+      <td>The project targets 3.11 or newer.</td>
+    </tr>
+    <tr>
+      <td><strong><code>uv</code></strong></td>
+      <td>Used for environment creation and dependency resolution against the committed lockfile.</td>
+    </tr>
+    <tr>
+      <td><strong>NVIDIA GPU with CUDA</strong></td>
+      <td>Training and inference both require a GPU. Multi-GPU is supported and is the default training path.</td>
+    </tr>
+    <tr>
+      <td><strong>Fast local storage</strong></td>
+      <td>
+        Converted volumes, checkpoints and prediction volumes are all large, and none of them belong
+        inside the repository.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Competition data</strong></td>
+      <td>CT volumes and labels, converted to the array layout the dataset expects.</td>
+    </tr>
+    <tr>
+      <td><strong>The external metrics package</strong></td>
+      <td>See the callout below &mdash; required for any scoring pass.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="install">2. Install</h2>
+
+<pre><code>git clone &lt;repository&gt;
+cd vesuvius
+uv sync</code></pre>
+
+<p>
+  <code>uv sync</code> creates the virtual environment and installs exactly the versions recorded in
+  the lockfile. Use it in preference to a bare <code>pip install</code>: the lockfile is what makes an
+  environment reproducible across machines.
+</p>
+
+<p class="note note--warn">
+  <span class="note__title">Install the metrics package separately</span>
+  The competition metric is supplied as an external, separately versioned package rather than as a
+  declared dependency of this project, so it is not installed by <code>uv sync</code>. Install it into
+  the same environment before running anything that imports the metrics module &mdash; typically as an
+  editable install pointing at a local checkout of the metrics implementation. If a scoring run fails
+  immediately with an unresolved import for the topological metrics package, this is the cause. The
+  requirement is described in
+  <a href="../architecture/dependencies.html#the-external-metrics-package">Dependencies</a>.
+</p>
+
+<h2 id="environment-variables">3. Environment variables</h2>
+
+<p>
+  Runtime paths and tracking settings are supplied through the environment. The conventional pattern
+  in this repository is to keep them in a <code>.env</code> file at the repository root and export the
+  whole file before invoking a command, which is exactly what the <code>Makefile</code> does:
+</p>
+
+<pre><code>set -a &amp;&amp; . .env &amp;&amp; set +a</code></pre>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Variable</th><th>Purpose</th><th>Required</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>BASE_DIR</code></td>
+      <td>
+        Root directory used to locate the shared configuration files and, from there, the data and
+        output directories. Defaults to the repository root when unset, so it only needs setting if
+        configuration lives elsewhere.
+      </td>
+      <td>Optional</td>
+    </tr>
+    <tr>
+      <td><code>NVME_DIR</code></td>
+      <td>Fast-storage root used by the data conversion and synthetic-data generation scripts.</td>
+      <td>For those scripts</td>
+    </tr>
+    <tr>
+      <td><code>WANDB_*</code></td>
+      <td>
+        Tracking project, entity, run name, directory and mode. Normally set programmatically from the
+        resolved configuration rather than by hand, but they can be exported to override it.
+      </td>
+      <td>Optional</td>
+    </tr>
+    <tr>
+      <td><code>CUDA_VISIBLE_DEVICES</code></td>
+      <td>
+        Restricts which devices a process may use. Essential for the partitioned nnU-Net prediction
+        path, where each worker is pinned to a single GPU.
+      </td>
+      <td>For multi-GPU work</td>
+    </tr>
+    <tr>
+      <td><code>NNUNET_*</code></td>
+      <td>
+        The nnU-Net raw, preprocessed and results directories. The nnU-Net driver sets these itself
+        from its own configuration, so they rarely need setting by hand.
+      </td>
+      <td>Set by the driver</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Note the interaction between the distributed launcher and <code>CUDA_VISIBLE_DEVICES</code>: the
+  launcher sets a local rank per process, and the code uses that rank to select a device. Setting
+  <code>CUDA_VISIBLE_DEVICES</code> on top of that renumbers the visible devices, so the two are best
+  used separately &mdash; launcher-driven for training, explicit pinning for the partitioned
+  prediction path.
+</p>
+
+<h2 id="data-layout">4. Data layout</h2>
+
+<p>
+  Scans arrive as TIFF and are converted once to NumPy arrays. Training reads the converted form, so
+  the conversion step is a one-time preparation rather than part of the training loop:
+</p>
+
+<pre><code>&lt;data_dir&gt;/
+├── train_images/&lt;case_id&gt;.npy     input volumes
+└── train_labels/&lt;case_id&gt;.npy     label volumes (0 / 1 / 2)
+
+&lt;base_dir&gt;/
+├── configs/                        shared configuration
+└── data/raw/kaggle_converted/      where scoring expects to find labels</code></pre>
+
+<p>
+  The case identifier is the filename stem, and the same identifier appears in prediction filenames
+  and score reports. Keeping that naming convention intact is what makes a case traceable from a
+  metric back to the volume that produced it.
+</p>
+
+<h2 id="run-training">5. Run training</h2>
+
+<p>
+  Every run is identified by an approach and an experiment. The multi-GPU entry point is the
+  <code>Makefile</code> target, which is the most complete example of the expected invocation:
+</p>
+
+<pre><code>make unetbasic-train
+
+# equivalently, spelled out:
+set -a &amp;&amp; . .env &amp;&amp; set +a
+PYTHONPATH=$(pwd)/src uv run torchrun \
+    --nproc_per_node=2 \
+    src/approach/unetbasic/train.py \
+    --experiment exp_v0</code></pre>
+
+<p>
+  Points to be aware of when adapting this:
+</p>
+
+<ul>
+  <li>
+    <code>PYTHONPATH</code> must include <code>src/</code>, because the approach packages live under
+    <code>src/approach/</code> rather than at the top level.
+  </li>
+  <li>
+    <code>--nproc_per_node</code> should match the number of GPUs you want to use; the code derives
+    rank and world size from the launcher&rsquo;s environment.
+  </li>
+  <li>
+    The experiment name selects the YAML under the approach&rsquo;s
+    <code>configs/experiments/</code> directory. Switching experiments is switching a name, not
+    editing code.
+  </li>
+  <li>
+    For a single-GPU run, invoke <code>train.py</code> directly instead of under the distributed
+    launcher.
+  </li>
+</ul>
+
+<p>
+  A run writes everything into <code>outputs/&lt;approach&gt;/&lt;experiment&gt;/</code> &mdash;
+  checkpoints, the resolved configuration, and tracking logs. The layout is documented in
+  <a href="../operations/deployment.html">Deployment</a>.
+</p>
+
+<h2 id="run-inference">6. Run inference</h2>
+
+<p>
+  Inference is a separate entry point that loads a checkpoint and writes predictions for a directory
+  of images:
+</p>
+
+<pre><code>make dynclassreg-infer      # single-GPU example, edit CHECKPOINT first
+
+# equivalently:
+PYTHONPATH=$(pwd)/src uv run python \
+    src/approach/unetbasic/inference.py \
+    --experiment exp_v0 \
+    --checkpoint &lt;checkpoint_dir&gt; \
+    --images_dir &lt;input_images_dir&gt; \
+    --output_dir &lt;output_dir&gt; \
+    --batch_size 1 \
+    --num_workers 4</code></pre>
+
+<p>
+  The output directory receives one probability array and one distance array per case, plus the
+  metadata that ties each prediction to its source case. Both arrays are written in half precision to
+  keep whole-volume artifacts a manageable size.
+</p>
+
+<p class="note">
+  <span class="note__title">Check the defaults before you rely on them</span>
+  Several inference arguments have absolute default paths baked in from the machine the pipeline was
+  developed on. Always pass <code>--checkpoint</code>, <code>--images_dir</code> and
+  <code>--output_dir</code> explicitly rather than depending on the defaults.
+</p>
+
+<h2 id="score-a-prediction">7. Score a prediction</h2>
+
+<p>
+  Scoring consumes a directory of predictions and reports the four numbers that matter:
+  SurfaceDice, TopoScore, VoiScore and the composite score. Two entry points exist:
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Entry point</th><th>Use it for</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <code>src/approach/unetbasic/metrics/kaggle_metrics.py</code>
+      </td>
+      <td>
+        The scoring path used during development: threshold, apply a post-processing configuration,
+        and average the component metrics over cases.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>exploration/scoring/</code>
+      </td>
+      <td>
+        Comparing post-processing strategies. This is where you sweep approaches rather than accept
+        one, and where new strategies are registered.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  A scoring pass is CPU-bound and parallelises across cases, so it benefits from a large core count.
+  Both entry points accept a sequential mode, which is much easier to debug when a single case
+  produces an unexpected number.
+</p>
+
+<h2 id="run-the-nnunet-baseline">8. Run the nnU-Net baseline</h2>
+
+<p>
+  The nnU-Net pipeline is a self-contained driver that can run end to end or stage by stage:
+</p>
+
+<pre><code>PYTHONPATH=$(pwd)/src uv run python scripts/nnunetbaseline/train_nnunetv2.py</code></pre>
+
+<p>
+  Its stages are dataset preparation, preprocessing, training, prediction and TIFF export. Run the
+  stages individually while iterating: preprocessing is the slowest step and there is rarely a reason
+  to repeat it because a training setting changed.
+</p>
+
+<h2 id="troubleshooting">9. First things to check</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Symptom</th><th>Likely cause</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Import error for the topological metrics package</td>
+      <td>The external metrics package has not been installed into this environment.</td>
+    </tr>
+    <tr>
+      <td><code>ModuleNotFoundError</code> for <code>approach.*</code></td>
+      <td><code>PYTHONPATH</code> does not include <code>src/</code>.</td>
+    </tr>
+    <tr>
+      <td>Training starts but data is not found</td>
+      <td>The data directory in the resolved configuration does not match where the converted arrays live.</td>
+    </tr>
+    <tr>
+      <td>Out-of-memory error on the GPU</td>
+      <td>Patch size, batch size and gradient accumulation in the experiment configuration.</td>
+    </tr>
+    <tr>
+      <td>Checkpoints written to an unexpected place</td>
+      <td>Absolute defaults in the inference or training arguments; pass explicit paths.</td>
+    </tr>
+    <tr>
+      <td>Scoring reports zeros</td>
+      <td>
+        No prediction files were found in the directory passed to the scorer, or the patch metadata
+        does not match the predictions.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__prev" href="../development/index.html"><span class="pager__dir">&larr; Previous</span><span class="pager__title">Development</span></a><a class="pager__next" href="../development/project-structure.html"><span class="pager__dir">Next &rarr;</span><span class="pager__title">Project Structure</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="../index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

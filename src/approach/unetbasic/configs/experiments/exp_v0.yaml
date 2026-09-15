@@ -1,0 +1,218 @@
+# Augmentation config - applied only during training
+# Axis convention: Data shape (D, H, W) = (Z, Y, X)
+#   - Z (axis 0, D): Scroll length axis - perpendicular to umbilicus/center
+#   - Y (axis 1, H): Height in cross-section
+#   - X (axis 2, W): Width in cross-section
+# The scroll wraps around forming arches in the XY plane, extending along Z.
+augmentation:
+  RandFlipd:
+    apply: true
+    keys_applied: ['image', 'label']
+    prob: 0.3
+    spatial_axis: [1, 2]  # Flip in Y and X axes only (not Z)
+  
+  RandRotate90d:
+    apply: true
+    keys_applied: ['image', 'label']
+    prob: 0.3
+    max_k: 3  # Rotate 0, 90, 180, or 270 degrees
+    spatial_axes: [1, 2]  # Rotate in XY plane only (axes 1 and 2)
+  
+  # Elastic deformation - subtle warping to increase robustness
+  Rand3DElasticd:
+    apply: true
+    keys_applied: ['image', 'label']
+    prob: 0.2
+    sigma_range: [5, 7]  # Control point spacing (lower = more local deformation)
+    magnitude_range: [50, 100]  # Deformation magnitude in voxels
+    mode: ['bilinear', 'nearest']  # bilinear for image, nearest for labels
+    padding_mode: 'zeros'
+  
+  # Random scaling (zoom) - no translation, rotation handled by RandRotate90d
+  RandZoomd:
+    apply: true
+    keys_applied: ['image', 'label']
+    prob: 0.3
+    min_zoom: 0.9  # 90% of original size
+    max_zoom: 1.1  # 110% of original size
+    mode: ['trilinear', 'nearest']  # trilinear for image, nearest for labels
+    padding_mode: 'constant'
+    keep_size: true  # Maintain original spatial size after zoom
+  
+  # Intensity augmentations (image only) - cheap and improve generalization
+  RandGaussianNoised:
+    apply: true
+    keys_applied: ['image']
+    prob: 0.15
+    mean: 0.0
+    std: 0.05  # Relative to normalized [0, 1] range
+  
+  RandGaussianSmoothd:
+    apply: true
+    keys_applied: ['image']
+    prob: 0.05
+    sigma_x: [0.5, 1.0]
+    sigma_y: [0.5, 1.0]
+    sigma_z: [0.5, 1.0]
+  
+  RandAdjustContrastd:
+    apply: true
+    keys_applied: ['image']
+    prob: 0.15
+    gamma: [0.7, 1.5]  # Contrast adjustment via gamma correction
+  
+  RandScaleIntensityd:
+    apply: true
+    keys_applied: ['image']
+    prob: 0.15
+    factors: 0.2  # ±20% intensity scaling
+  
+  RandShiftIntensityd:
+    apply: true
+    keys_applied: ['image']
+    prob: 0.15
+    offsets: 0.1  # ±10% intensity shift
+
+# Debug/test configuration for faster iteration
+debug:
+  enabled: false  # Set to true to downsample dataset for quick testing
+  downsample_factor: 0.01  # Fraction of data to use (0.1 = 10%, 0.5 = 50%, etc.)
+
+# This extends the global Hydra config structure
+data:
+  kaggle_data:
+    base: data/kaggle_converted/
+    train: train.csv
+    test: test.csv
+  patch_size:
+    z: 32
+    y: 320
+    x: 320
+
+# Train / test split
+test_size: 0.006
+
+training:
+  epochs: 150
+  learning_rate: 5e-4
+  fp16: false
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 1
+  logging_epoch_pct: 0.1
+  save_epoch_pct: 10.0  # Save checkpoint every 100% of an epoch (once every epoch)
+  eval_epoch_pct: 10.0  # Evaluate every X% of an epoch
+  weight_decay: 0.01  # Add weight decay for regularization
+  warmup_epoch_pct: 0.0  # Warmup for 10% of first epoch
+  lr_scheduler_type: "cosine"  # Cosine annealing for better convergence
+  # Data loading optimizations for GPU utilization
+  num_workers: 12  # Parallel workers for training (16 cores available, leave 4 for system)
+  prefetch_factor: 8  # Prefetch more batches to keep GPU fed during heavy transforms
+  # Early stopping configuration
+  early_stopping_enabled: false  # Enable early stopping based on eval_loss
+  early_stopping_patience: 4  # Number of eval checks with worsening eval_loss before stopping
+  early_stopping_metric: "eval_loss"  # Metric to monitor for early stopping
+  gradient_checkpointing: false  # Enable gradient checkpointing to save memory
+
+model:
+  base_channels: 96
+  use_checkpoint: true
+  use_pretrained:
+    apply: true
+    # Relative to BASE_DIR (repo root); override BASE_DIR via env var or --base_dir
+    path: models/dynunetclassreg/jan6/checkpoint-58650
+
+# =============================================================================
+# LOSS WEIGHT SCHEDULE (Curriculum Learning)
+# =============================================================================
+# Controls the WEIGHTS of each loss component during training.
+# This is separate from loss HYPERPARAMETERS (configured in the `loss:` section below).
+#
+# Strategy: Start with basic overlap losses, then gradually introduce topology constraints.
+# Implemented via TrainerCallback in train.py - updates model.loss_fn.update_weights().
+#
+# Available weight keys (all optional - only specify ones you want to schedule):
+#   Classification head:  dice_weight, bce_weight, tversky_weight, surface_weight,
+#                         topo_weight, connectivity_weight, boundary_weight, bifurcation_weight
+#   Distance head:        distance_weight, gradient_penalty_weight
+# =============================================================================
+loss_weight_schedule:
+  enabled: true
+  ramps:
+    # --- Classification Head Weights ---
+    # --- Classification Head Weights ---
+    # INCREASED dice - encourages better overlap, penalizes both FP and FN equally
+    dice_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.25, end_value: 0.25}
+    
+    # REDUCED BCE - it's not the most effective for thin manifolds
+    bce_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.20, end_value: 0.20}
+    
+    # REDUCED Tversky AND flip alpha/beta in loss config to penalize FP more
+    tversky_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.25, end_value: 0.25}
+
+    # ENABLE surface loss - helps with boundary precision
+    surface_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.0, end_value: 0.0}
+
+    # Keep topo disabled - it doesn't help with over-prediction
+    topo_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.0, end_value: 0.0}
+    
+    # Keep connectivity disabled - encourages more prediction, not what you need
+    connectivity_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.0, end_value: 0.0}
+    
+    # Keep boundary disabled for now
+    boundary_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.0, end_value: 0.0}
+
+    # ENABLE bifurcation - this is exactly for "too many sheets" problem
+    # Start small since model already trained 100 epochs
+    bifurcation_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.1, end_value: 0.1}
+
+    # --- Distance Head Weights ---
+    # INCREASE distance weight - SDF naturally enforces correct topology
+    distance_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.20, end_value: 0.20}
+    
+    # REDUCE gradient penalty - it may be spreading predictions
+    gradient_penalty_weight: {start_epoch: 0, end_epoch: 0, start_value: 0.0, end_value: 0.0}
+
+# =============================================================================
+# LOSS CONFIGURATION
+# =============================================================================
+# The model uses TopologyPreservingLoss which internally wraps ThinManifoldLoss.
+# This provides dual-head training: binary segmentation + distance regression.
+#
+# IMPORTANT: Loss component WEIGHTS are controlled by loss_weight_schedule above.
+# This section only configures HYPERPARAMETERS (how each component works).
+# =============================================================================
+
+loss:
+  # --- Tversky Loss Hyperparameters ---
+  # Controls FP vs FN penalty balance for thin manifold segmentation
+  tversky_alpha: 0.3         # False positive penalty (lower = tolerate extra voxels)
+  tversky_beta: 0.7          # False negative penalty (higher = penalize missing voxels more)
+
+  # --- Anti-Bifurcation Hyperparameters ---
+  # Prevents junctions where sheets split or merge
+  # Updated for variable-thickness sheets (3-9 voxels) extruded along Z-axis
+  # NOTE: These are internal component weights WITHIN the bifurcation loss.
+  # The overall bifurcation_weight in loss_weight_schedule controls global importance.
+  bifurcation_junction_weight: 1.0        # Skeleton junction detection (primary detector)
+  bifurcation_gradient_weight: 0.2        # Gradient consistency (reduced - was too aggressive)
+  bifurcation_gap_weight: 0.2             # Inter-sheet gap penalty (reduced - was broken)
+  bifurcation_density_weight: 0.0         # Local density (disabled - not useful for thick sheets)
+  bifurcation_thickness_weight: 0.0       # Thickness constraint (disabled by default)
+  bifurcation_neighborhood_size: 11       # Neighborhood size (larger for thick sheets)
+  bifurcation_max_thickness: 9.0          # Max sheet thickness in voxels (3-9 range)
+  bifurcation_skeleton_erosion_iters: 3   # Iterations to approximate skeleton (legacy, not used)
+  bifurcation_min_sheet_gap: 5.0          # Minimum expected gap between sheets
+
+  # --- Topology Stability Hyperparameters ---
+  # Morphological operations to detect holes/breaks in predictions
+  topo_kernel_sizes: [3, 5, 7]        # Kernel sizes for closing/opening (odd integers)
+  topo_anisotropic: true              # Use (1,k,k) kernels for 2D sheets in 3D
+  topo_closing_frac: 0.75             # Emphasis on filling gaps/holes
+  topo_opening_frac: 0.25             # Penalty for thin spurs/bridges
+
+  # --- Connectivity Hyperparameters ---
+  # Anisotropic total variation to enforce continuity along an axis
+  connectivity_axis: 2                # 2=Z, 3=Y, 4=X for [B,1,D,H,W] tensors
+  connectivity_power: 1.0             # 1.0=L1 norm; >1 penalizes larger jumps more
+

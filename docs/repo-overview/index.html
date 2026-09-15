@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vesuvius Challenge 2025 &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="A 3D CT segmentation project that reconstructs the recto surface of carbonised papyrus scrolls — built on MONAI 3D U-Net models, a dual-head distance-field network, and an offline scoring lab tuned for the competition metric.">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link is-active" href="index.html" aria-current="page">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link" href="architecture/index.html">Overview</a>
+<a class="nav__link" href="architecture/system.html">System Design</a>
+<a class="nav__link" href="architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link" href="ai/index.html">Overview</a>
+<a class="nav__link" href="ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link" href="development/index.html">Overview</a>
+<a class="nav__link" href="development/getting-started.html">Getting Started</a>
+<a class="nav__link" href="development/project-structure.html">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link" href="operations/index.html">Overview</a>
+<a class="nav__link" href="operations/deployment.html">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">Vesuvius Challenge 2025</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Home</a></nav>
+<h1>Vesuvius Challenge 2025</h1>
+<p class="page-lede">A 3D CT segmentation project that reconstructs the recto surface of carbonised papyrus scrolls &mdash; built on MONAI 3D U-Net models, a dual-head distance-field network, and an offline scoring lab tuned for the competition metric.</p>
+
+<figure class="figure--media figure--hero">
+  <img src="assets/img/figures/ct-scroll.webp" width="1600" height="483"
+       alt="Banner artwork of a carbonised Herculaneum papyrus scroll reconstructed from a high-resolution X-ray CT scan" decoding="async" fetchpriority="high">
+  <figcaption>A Herculaneum scroll imaged by X-ray CT &mdash; the raw data behind the task. Source: <a href="https://www.kaggle.com/competitions/vesuvius-challenge-surface-detection">Vesuvius Challenge &mdash; Surface Detection, Kaggle</a>.</figcaption>
+</figure>
+
+<div class="toc" data-toc hidden></div>
+
+<h2 id="what-this-project-does">1. What this project does</h2>
+
+<p>
+  <strong>Vesuvius</strong> is a research codebase for the
+  <em>Vesuvius Challenge 2025</em>: a competition to read the inside of carbonised
+  Herculaneum papyrus scrolls without opening them. Scrolls were scanned with high-resolution
+  X-ray computed tomography, producing three-dimensional image volumes of tightly wound,
+  crushed sheets of papyrus. The scientific prize is the text written on those sheets &mdash;
+  but before any ink can be detected, the writing surface itself has to be located.
+</p>
+
+<figure class="figure--media">
+  <img src="assets/img/figures/scroll-cross-sections.webp" width="1200" height="1074"
+       alt="The sealed carbonised roll, X-ray cross-sections of the spiralled sheet, and the unwrapped surface with Greek writing" loading="lazy" decoding="async">
+  <figcaption>From object to text &mdash; the sealed roll, cross-sections through the scan revealing the spiralled sheet, and the unwrapped surface where the Greek writing emerges. Source: <a href="https://scrollprize.org/firstscroll">scrollprize.org</a>.</figcaption>
+</figure>
+
+<p>
+  That is the job this repository does. Given a 3D CT sub-volume, the models here
+  <strong>segment the <em>recto</em> surface</strong> of the papyrus: the sheet layer that faces
+  the centre of the scroll (the <em>umbilicus</em>). Everything downstream &mdash; flattening the
+  surface, detecting ink, reading letters &mdash; depends on this surface being traced accurately
+  and, critically, <em>as a single connected sheet</em>.
+</p>
+
+<h2 id="the-task-in-practice">2. The task in practice</h2>
+
+<p>
+  The input is a 3D image volume. The target is a voxel-wise label map over a three-class scheme:
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Label</th><th>Meaning</th><th>Role in training</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>0</code></td><td>Background</td><td>Negative class.</td></tr>
+    <tr>
+      <td><code>1</code></td><td>Foreground &mdash; the recto surface</td>
+      <td>Positive class. The surface itself.</td>
+    </tr>
+    <tr>
+      <td><code>2</code></td><td>Unlabelled / ignore</td>
+      <td>Excluded from the loss and from scoring; padding uses this value.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  Three properties of this target shape the entire codebase, and are worth internalising before
+  reading any of the architecture or modelling pages:
+</p>
+
+<ul>
+  <li>
+    <strong>The foreground is a surface, not a volume.</strong> The sheet is roughly two voxels
+    thick but hundreds of voxels wide. In a 3D patch the positive class occupies well under one
+    percent of voxels, and it forms a thin curved 2D manifold embedded in 3D space.
+  </li>
+  <li>
+    <strong>Topology matters as much as overlap.</strong> A prediction that is 99&nbsp;% correct
+    voxel-wise but has a single spurious hole or a bridging connection between two sheets scores
+    badly, because that error breaks the surface when it is later unrolled.
+  </li>
+  <li>
+    <strong>Resolution is anisotropic in importance.</strong> Following a sheet along the scroll
+    axis is easy; resolving two adjacent wraps of the scroll from each other is hard. The codebase
+    therefore spends a great deal of effort on the cross-sheet directions.
+  </li>
+</ul>
+
+<h2 id="how-performance-is-measured">3. How performance is measured</h2>
+
+<p>
+  Competition performance is a single composite number, assembled from three complementary
+  metrics. They are deliberately unalike: one measures geometric overlap, one measures whether
+  the surface has the right <em>shape</em>, and one measures whether the labelled voxels are
+  placed consistently with the ground truth.
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Component</th><th>Weight</th><th>What it captures</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>SurfaceDice</strong></td>
+      <td><code>0.35</code></td>
+      <td>
+        Boundary overlap within a distance tolerance &mdash; forgiving of tiny thickness errors,
+        strict about the surface being in the right place.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>VoiScore</strong></td>
+      <td><code>0.35</code></td>
+      <td>
+        Variation of information: how cleanly the predicted region separates from the background,
+        penalising both stray positives and missing material.
+      </td>
+    </tr>
+    <tr>
+      <td><strong>TopoScore</strong></td>
+      <td><code>0.30</code></td>
+      <td>
+        Betti-number matching &mdash; does the prediction have the right number of connected
+        components, tunnels and cavities? This is the topological correctness term.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p class="note">
+  <span class="note__title">Why TopoScore dominates the engineering</span>
+  SurfaceDice and VoiScore are largely solved by getting the segmentation approximately right.
+  TopoScore is not: it is a discrete quantity, so a prediction can be visually excellent and still
+  earn almost nothing if it accidentally closes a tunnel or splits a component. Nearly every
+  modelling decision in this repository &mdash; the anisotropic backbone, the distance-field
+  auxiliary head, the loss suite, and the post-processing lab &mdash; exists to push this one term up.
+</p>
+
+<h2 id="the-two-pipelines">4. The two pipelines</h2>
+
+<p>
+  The repository contains two complete, coexisting segmentation pipelines. They share the dataset
+  contract and the scoring code, but differ in where the modelling intelligence lives: one in a
+  custom architecture and loss design, the other with a mature automatic configuration framework.
+</p>
+
+<div class="card-grid">
+  <a class="card" href="ai/pipeline.html#custom-pipeline">
+    <span class="card__title">Custom MONAI pipeline</span>
+    <span class="card__desc">
+      A dual-head 3D DynUNet that predicts the surface mask and a signed distance field
+      simultaneously, trained through Hugging&nbsp;Face <code>Trainer</code> with distributed
+      data-parallel execution and a loss-weight curriculum.
+    </span>
+    <span class="card__meta"><code>src/approach/unetbasic/</code></span>
+  </a>
+  <a class="card" href="ai/pipeline.html#nnunet-pipeline">
+    <span class="card__title">nnU-Net v2 pipeline</span>
+    <span class="card__desc">
+      The nnU-Net v2 framework driving a residual-encoder 3D U-Net, configured from an explicit
+      plans file, with multi-GPU partitioned inference and a packaged Kaggle inference dataset.
+    </span>
+    <span class="card__meta"><code>scripts/nnunetbaseline/</code></span>
+  </a>
+</div>
+
+<p>
+  Both pipelines converge on the same evaluation surface: probability volumes written to disk,
+  consumed by the scoring code in <code>src/approach/unetbasic/metrics/kaggle_metrics.py</code> and
+  by the offline post-processing lab under <code>exploration/scoring/</code>.
+</p>
+
+<h2 id="repository-at-a-glance">5. Repository at a glance</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Location</th><th>Contents</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>src/approach/unetbasic/</code></td>
+      <td>Custom pipeline: dataset, model, training entry point, inference, metrics, losses.</td>
+    </tr>
+    <tr>
+      <td><code>scripts/</code></td>
+      <td>nnU-Net baseline driver, experiment launcher and queue, synthetic data generators.</td>
+    </tr>
+    <tr>
+      <td><code>configs/</code></td>
+      <td>Layered Hydra configuration shared by all approaches.</td>
+    </tr>
+    <tr>
+      <td><code>exploration/scoring/</code></td>
+      <td>The offline scoring and post-processing lab.</td>
+    </tr>
+    <tr>
+      <td><code>kaggle_datasets/inference/</code></td>
+      <td>Code packaged and published as a Kaggle dataset for submission-time inference.</td>
+    </tr>
+    <tr>
+      <td><code>tests/</code></td>
+      <td>Unit tests for the dataset contract, augmentation config and loss implementations.</td>
+    </tr>
+    <tr>
+      <td><code>docs/repo-overview/</code></td>
+      <td>This documentation portal.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="where-to-go-next">6. Where to go next</h2>
+
+<div class="card-grid">
+  <a class="card" href="development/getting-started.html">
+    <span class="card__title">I am new to the project</span>
+    <span class="card__desc">
+      Install the environment, understand the data layout and run a training job end to end.
+    </span>
+    <span class="card__meta">Development &rarr;</span>
+  </a>
+  <a class="card" href="architecture/system.html">
+    <span class="card__title">I need the architecture</span>
+    <span class="card__desc">
+      System context, component responsibilities, and the data and label flow through the stack.
+    </span>
+    <span class="card__meta">Architecture &rarr;</span>
+  </a>
+  <a class="card" href="ai/pipeline.html">
+    <span class="card__title">I am reviewing the AI/ML</span>
+    <span class="card__desc">
+      Both training pipelines, the model architectures, the loss suite, and the competition metrics.
+    </span>
+    <span class="card__meta">AI &amp; ML &rarr;</span>
+  </a>
+  <a class="card" href="operations/deployment.html">
+    <span class="card__title">I need to run or ship it</span>
+    <span class="card__desc">
+      Output layout, checkpointing, experiment tracking, Kaggle packaging and documentation hosting.
+    </span>
+    <span class="card__meta">Operations &rarr;</span>
+  </a>
+</div>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__next" href="architecture/index.html"><span class="pager__dir">Next &rarr;</span><span class="pager__title">Architecture</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

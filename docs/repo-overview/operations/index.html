@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="Running the project and shipping its results: execution environments, the artifacts a run produces, experiment tracking, Kaggle packaging and documentation publishing.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="../assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link" href="../index.html">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link" href="../architecture/index.html">Overview</a>
+<a class="nav__link" href="../architecture/system.html">System Design</a>
+<a class="nav__link" href="../architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="../architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link" href="../ai/index.html">Overview</a>
+<a class="nav__link" href="../ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="../ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="../ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link" href="../development/index.html">Overview</a>
+<a class="nav__link" href="../development/getting-started.html">Getting Started</a>
+<a class="nav__link" href="../development/project-structure.html">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link is-active" href="../operations/index.html" aria-current="page">Overview</a>
+<a class="nav__link" href="../operations/deployment.html">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">Operations</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="breadcrumb__sep">/</span><span>Operations</span></nav>
+<h1>Operations</h1>
+<p class="page-lede">Running the project and shipping its results: execution environments, the artifacts a run produces, experiment tracking, Kaggle packaging and documentation publishing.</p>
+<div class="toc" data-toc hidden></div>
+
+<div class="card-grid">
+  <a class="card" href="deployment.html">
+    <span class="card__title">Deployment</span>
+    <span class="card__desc">
+      Execution environments, the output layout a run produces, checkpoint and resume behaviour,
+      experiment tracking, Kaggle packaging, submission generation and documentation hosting.
+    </span>
+  </a>
+</div>
+
+<h2 id="what-operations-covers">1. What this section covers</h2>
+
+<p>
+  Development pages explain how to change the code. This section explains how to <em>run</em> it and
+  where its artifacts go: what a training run leaves on disk, how to pick a run back up, how
+  predictions reach a submission, and how this documentation is published.
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Question</th><th>Answered in</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Where do checkpoints, logs and resolved configs go?</td>
+      <td><a href="deployment.html#output-layout">Deployment &mdash; Output layout</a></td>
+    </tr>
+    <tr>
+      <td>How do I resume or compare runs?</td>
+      <td><a href="deployment.html#checkpoints">Deployment &mdash; Checkpoints</a></td>
+    </tr>
+    <tr>
+      <td>How does an experiment reach the leaderboard?</td>
+      <td><a href="deployment.html#kaggle-packaging">Deployment &mdash; Kaggle packaging</a></td>
+    </tr>
+    <tr>
+      <td>How is this site published?</td>
+      <td><a href="deployment.html#publishing-the-docs">Deployment &mdash; Publishing the docs</a></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p class="note">
+  <span class="note__title">Environment-specific paths</span>
+  Several entry points carry absolute paths from the machine the pipeline was developed on. Treat any
+  path in a default argument as a placeholder to override, not as a working default, and pass explicit
+  paths on the command line. <a href="deployment.html#portability">Deployment</a> summarises which
+  settings to check first when moving to a new machine.
+</p>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__prev" href="../development/project-structure.html"><span class="pager__dir">&larr; Previous</span><span class="pager__title">Project Structure</span></a><a class="pager__next" href="../operations/deployment.html"><span class="pager__dir">Next &rarr;</span><span class="pager__title">Deployment</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="../index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# project_name: "vesuvius-unet3d"
+project_name: "vesuvius-monai"
+# Weights & Biases entity (your team or username). Set your own entity here, or export
+# WANDB_ENTITY. Leave it empty to use your account's default entity.
+entity: ""
+mode: "online"   # can be "offline" for local testing
+# mode: "disable"   # can be "offline" for local testing

@@ -1,0 +1,52 @@
+[project]
+name = "vesuvius"
+version = "0.1.0"
+description = "Surface segmentation of Herculaneum papyrus scrolls from 3D X-ray CT (Vesuvius Challenge 2025)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "accelerate",
+    "ipykernel",
+    "kaggle",
+    "pandas",
+    "peft",
+    "ruff",
+    "scikit-learn",
+    "transformers",
+    "hydra-core",
+    "wandb",
+    "matplotlib",
+    "torch==2.8.0",
+    "torchvision==0.23.0",
+    "tifffile",
+    "imagecodecs",
+    "ipywidgets",
+    "pyarrow",
+    "surface-distance",
+    "absl-py",
+    "monai>=1.5.1",
+    "ipympl>=0.9.8",
+    "einops>=0.8.1",
+    "nibabel>=5.3.3",
+    "nnunetv2>=2.6.2",
+    "scikit-image>=0.26.0",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.ruff]
+line-length = 100
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+ignore_missing_imports = true

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI &amp; ML &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="The modelling core: what makes this problem hard, both training pipelines end to end, the network architectures and loss suite, and how predictions are evaluated against the competition metric.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="../assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link" href="../index.html">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link" href="../architecture/index.html">Overview</a>
+<a class="nav__link" href="../architecture/system.html">System Design</a>
+<a class="nav__link" href="../architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="../architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link is-active" href="../ai/index.html" aria-current="page">Overview</a>
+<a class="nav__link" href="../ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="../ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="../ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link" href="../development/index.html">Overview</a>
+<a class="nav__link" href="../development/getting-started.html">Getting Started</a>
+<a class="nav__link" href="../development/project-structure.html">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link" href="../operations/index.html">Overview</a>
+<a class="nav__link" href="../operations/deployment.html">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">AI &amp; ML</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="breadcrumb__sep">/</span><span>AI &amp; ML</span></nav>
+<h1>AI &amp; ML</h1>
+<p class="page-lede">The modelling core: what makes this problem hard, both training pipelines end to end, the network architectures and loss suite, and how predictions are evaluated against the competition metric.</p>
+<div class="toc" data-toc hidden></div>
+
+<div class="card-grid">
+  <a class="card" href="pipeline.html">
+    <span class="card__title">Pipelines</span>
+    <span class="card__desc">
+      The custom MONAI training pipeline end to end, the nnU-Net v2 lifecycle, and a direct
+      comparison of the two.
+    </span>
+  </a>
+  <a class="card" href="models.html">
+    <span class="card__title">Models &amp; Losses</span>
+    <span class="card__desc">
+      Network architectures, the dual-head distance-field design, and the full loss suite with
+      every component and its default weight.
+    </span>
+  </a>
+  <a class="card" href="evaluation.html">
+    <span class="card__title">Evaluation &amp; Metrics</span>
+    <span class="card__desc">
+      The competition metric definitions, the composite weighting, and the offline
+      post-processing lab that turns probability volumes into a score.
+    </span>
+  </a>
+</div>
+
+<h2 id="what-makes-this-problem-hard">1. What makes this problem hard</h2>
+
+<p>
+  Four properties of the task drive essentially every modelling decision in this section. They are
+  worth stating plainly before the architectures, because each one explains a design choice that
+  otherwise looks arbitrary.
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Property</th><th>Consequence for the model</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <strong>Extreme class imbalance.</strong> The surface occupies far less than one percent of
+        voxels in a patch.
+      </td>
+      <td>
+        Patch sampling must be foreground-weighted, and the loss must be composed rather than a
+        single term &mdash; plain cross-entropy would be dominated by empty space.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong>The target is a thin manifold.</strong> A sheet is a couple of voxels thick across
+        hundreds of voxels of extent.
+      </td>
+      <td>
+        Downsampling along the sheet&rsquo;s normal direction destroys it, so the encoder is
+        deliberately asymmetric &mdash; it reduces resolution in the cross-sheet plane while
+        preserving it along the scroll axis.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Topology is scored discretely.</strong> Betti numbers are integers, so a near-miss
+        earns nothing.
+      </td>
+      <td>
+        A binary mask alone gives the optimiser no gradient for &ldquo;almost connected&rdquo;. The
+        network therefore also regresses a continuous distance field, and the loss includes
+        explicitly topological terms.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <strong>Adjacent scroll wraps look alike.</strong> Two neighbouring sheets of papyrus
+        produce similar local intensity.
+      </td>
+      <td>
+        Distance supervision and continuity terms discourage the model from bridging across the gap
+        between wraps &mdash; the single most damaging topological error.
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="how-the-pages-fit-together">2. How the pages fit together</h2>
+
+<p>
+  <a href="pipeline.html">Pipelines</a> describes <em>process</em>: how a run is launched, what the
+  training loop does, and the sequence of steps in each of the two pipelines.
+  <a href="models.html">Models &amp; Losses</a> describes <em>mechanism</em>: the networks
+  themselves and the objective they are trained against.
+  <a href="evaluation.html">Evaluation &amp; Metrics</a> closes the loop: how a trained model is
+  measured, and the substantial post-processing machinery that sits between a raw prediction and a
+  final score.
+</p>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__prev" href="../architecture/dependencies.html"><span class="pager__dir">&larr; Previous</span><span class="pager__title">Dependencies</span></a><a class="pager__next" href="../ai/pipeline.html"><span class="pager__dir">Next &rarr;</span><span class="pager__title">Pipelines</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="../index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

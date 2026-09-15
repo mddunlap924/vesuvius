@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="72" viewBox="0 0 460 72" role="img" aria-label="Explore the full breakdown — documentation portal">
+  <title>Explore the full breakdown — documentation portal</title>
+  <defs>
+    <linearGradient id="ctaFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5b9bf8"/>
+      <stop offset="100%" stop-color="#3f39c0"/>
+    </linearGradient>
+    <linearGradient id="ctaSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.14"/>
+    </linearGradient>
+    <linearGradient id="ctaEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.25"/>
+    </linearGradient>
+  </defs>
+
+  <!-- soft under-shadow so the button reads as raised on light backgrounds -->
+  <rect x="0" y="3" width="460" height="64" rx="16" fill="#1e1b4b" opacity="0.35"/>
+  <rect x="0" y="0" width="460" height="64" rx="16" fill="url(#ctaFill)"/>
+  <rect x="0" y="0" width="460" height="64" rx="16" fill="url(#ctaSheen)"/>
+  <rect x="1.25" y="1.25" width="457.5" height="61.5" rx="15" fill="none" stroke="url(#ctaEdge)" stroke-width="2.5"/>
+
+  <!-- open book -->
+  <g transform="translate(38,19) scale(1.05)" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 3.2C4.6 1.3 8.1 1.3 11.3 3.2c3.2-1.9 6.7-1.9 10.2 0v19.6c-3.5-1.9-7-1.9-10.2 0-3.2-1.9-6.7-1.9-10.2 0z"/>
+    <path d="M11.3 3.2v19.6"/>
+  </g>
+
+  <text x="232" y="39.5" text-anchor="middle" textLength="286" lengthAdjust="spacing"
+        font-family="Helvetica Neue, Helvetica, Arial, Liberation Sans, DejaVu Sans, sans-serif" font-size="21.5" font-weight="700"
+        fill="#ffffff">Explore the full breakdown</text>
+
+  <!-- arrow: nudges right to signal "click me" -->
+  <g transform="translate(402,20)" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <g>
+      <path d="M0 12h18"/>
+      <path d="M11.5 5.5L18 12l-6.5 6.5"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0; 6 0; 6 0; 0 0" keyTimes="0; 0.18; 0.82; 1" dur="2.8s" repeatCount="indefinite"/>
+    </g>
+  </g>
+</svg>

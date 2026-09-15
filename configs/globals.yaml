@@ -1,0 +1,22 @@
+defaults:
+  - data: base
+  - wandb: wandb
+  - _self_
+
+
+# Global experiment settings
+seed: 42
+output_dir: outputs
+
+# Default approach and experiment (can be overridden via CLI)
+# Usage: python scripts/run_experiment.py approach=unet experiment=exp_v0
+approach: null      # Set to null to require CLI override, or set default: unet
+experiment: null    # Set to null to require CLI override, or set default: exp_v0
+
+# Turn off strict mode to allow merging experiment configs
+struct: false
+
+# Prevent Hydra from creating timestamped output directories
+hydra:
+  run:
+    dir: outputs

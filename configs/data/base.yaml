@@ -1,0 +1,5 @@
+kaggle_data:
+  train: data/kaggle_converted/train.csv
+  test: data/kaggle_converted/test.csv
+  submission: data/kaggle_converted/sample_submission.csv
+

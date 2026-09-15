@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Development &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="Everything needed to work in this repository: environment setup, the data layout, the commands that run training and inference, and the conventions the codebase follows.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="../assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link" href="../index.html">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link" href="../architecture/index.html">Overview</a>
+<a class="nav__link" href="../architecture/system.html">System Design</a>
+<a class="nav__link" href="../architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="../architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link" href="../ai/index.html">Overview</a>
+<a class="nav__link" href="../ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="../ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="../ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link is-active" href="../development/index.html" aria-current="page">Overview</a>
+<a class="nav__link" href="../development/getting-started.html">Getting Started</a>
+<a class="nav__link" href="../development/project-structure.html">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link" href="../operations/index.html">Overview</a>
+<a class="nav__link" href="../operations/deployment.html">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">Development</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="breadcrumb__sep">/</span><span>Development</span></nav>
+<h1>Development</h1>
+<p class="page-lede">Everything needed to work in this repository: environment setup, the data layout, the commands that run training and inference, and the conventions the codebase follows.</p>
+<div class="toc" data-toc hidden></div>
+
+<div class="card-grid">
+  <a class="card" href="getting-started.html">
+    <span class="card__title">Getting Started</span>
+    <span class="card__desc">
+      Install the environment, satisfy the one external prerequisite, lay out the data, and run
+      training, inference and scoring.
+    </span>
+  </a>
+  <a class="card" href="project-structure.html">
+    <span class="card__title">Project Structure</span>
+    <span class="card__desc">
+      An annotated tour of the tree, how configuration layers resolve, and the conventions to follow
+      when adding an approach or an experiment.
+    </span>
+  </a>
+</div>
+
+<h2 id="who-this-section-is-for">1. Who this section is for</h2>
+
+<p>
+  This section assumes you are comfortable with Python, PyTorch and the command line, and that you
+  have a CUDA-capable GPU available. It does not assume any prior familiarity with the Vesuvius
+  Challenge data, with MONAI, or with nnU-Net.
+</p>
+
+<h2 id="the-fastest-path-to-a-result">2. The fastest path to a result</h2>
+
+<p>
+  If you want to see the pipeline work before reading anything else, this is the shortest route:
+</p>
+
+<ol>
+  <li>Synchronise the locked environment with <code>uv</code>.</li>
+  <li>Install the external metrics package (see the prerequisite callout below).</li>
+  <li>Point the pipeline at converted data and run a short training job.</li>
+  <li>Run inference from the resulting checkpoint.</li>
+  <li>Score the predictions and read the component metrics.</li>
+</ol>
+
+<p>
+  All five steps are detailed in <a href="getting-started.html">Getting Started</a>.
+</p>
+
+<p class="note note--warn">
+  <span class="note__title">One prerequisite is not in the lockfile</span>
+  The competition metric implementation arrives as an external package rather than as a declared
+  dependency, so a fresh <code>uv sync</code> is <em>not</em> sufficient to run a scoring pass.
+  Plan for that step up front rather than discovering it at the end of a training run.
+</p>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__prev" href="../ai/evaluation.html"><span class="pager__dir">&larr; Previous</span><span class="pager__title">Evaluation &amp; Metrics</span></a><a class="pager__next" href="../development/getting-started.html"><span class="pager__dir">Next &rarr;</span><span class="pager__title">Getting Started</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="../index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>

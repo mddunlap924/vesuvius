@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture &middot; Vesuvius Repo Overview</title>
+<meta name="description" content="How the project is put together: the external context, the two segmentations pipelines, the component responsibilities, and the data and label contract that everything else is built on.">
+<link rel="stylesheet" href="../assets/css/style.css">
+<link rel="stylesheet" href="../assets/css/diagrams.css">
+<script>(function(){var d=document.documentElement;try{var t=localStorage.getItem("vesuvius-docs-theme");}catch(e){var t=null;}if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);})();</script>
+<script defer src="../assets/js/site.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="sidebar__scrim"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <span class="brand__mark" aria-hidden="true">VC</span>
+      <span class="brand__text">
+        <span class="brand__title">Vesuvius</span>
+        <span class="brand__subtitle">Repo Overview</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Documentation">
+<div class="nav__group">
+<div class="nav__label">Overview</div>
+<a class="nav__link" href="../index.html">Home</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Architecture</div>
+<a class="nav__link is-active" href="../architecture/index.html" aria-current="page">Overview</a>
+<a class="nav__link" href="../architecture/system.html">System Design</a>
+<a class="nav__link" href="../architecture/data-flow.html">Data Flow</a>
+<a class="nav__link" href="../architecture/dependencies.html">Dependencies</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">AI &amp; ML</div>
+<a class="nav__link" href="../ai/index.html">Overview</a>
+<a class="nav__link" href="../ai/pipeline.html">Pipelines</a>
+<a class="nav__link" href="../ai/models.html">Models &amp; Losses</a>
+<a class="nav__link" href="../ai/evaluation.html">Evaluation &amp; Metrics</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Development</div>
+<a class="nav__link" href="../development/index.html">Overview</a>
+<a class="nav__link" href="../development/getting-started.html">Getting Started</a>
+<a class="nav__link" href="../development/project-structure.html">Project Structure</a>
+</div>
+<div class="nav__group">
+<div class="nav__label">Operations</div>
+<a class="nav__link" href="../operations/index.html">Overview</a>
+<a class="nav__link" href="../operations/deployment.html">Deployment</a>
+</div>
+    </nav>
+    <div class="sidebar__footer">
+      <span>Kaggle Vesuvius 2025</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-controls="sidebar"
+              aria-expanded="false" aria-label="Toggle navigation">&#9776;</button>
+      <span class="topbar__title">Architecture</span>
+      <button class="theme-toggle" type="button">Dark</button>
+    </header>
+
+    <main class="content" id="main">
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="breadcrumb__sep">/</span><span>Architecture</span></nav>
+<h1>Architecture</h1>
+<p class="page-lede">How the project is put together: the external context, the two segmentations pipelines, the component responsibilities, and the data and label contract that everything else is built on.</p>
+<div class="toc" data-toc hidden></div>
+
+<div class="card-grid">
+  <a class="card" href="system.html">
+    <span class="card__title">System Design</span>
+    <span class="card__desc">
+      External context, the two-pipeline decomposition, component responsibilities and the
+      configuration layer that drives experiments.
+    </span>
+  </a>
+  <a class="card" href="data-flow.html">
+    <span class="card__title">Data Flow</span>
+    <span class="card__desc">
+      Raw CT volumes to training tensors to prediction artifacts &mdash; the label semantics and
+      the exact transform chain that produces each output key.
+    </span>
+  </a>
+  <a class="card" href="dependencies.html">
+    <span class="card__title">Dependencies</span>
+    <span class="card__desc">
+      The runtime stack, how it is pinned with <code>uv</code>, the externally supplied metrics
+      package, hardware assumptions and the module import graph.
+    </span>
+  </a>
+</div>
+
+<h2 id="why-architecture-deserves-its-own-section">1. Why architecture deserves its own section</h2>
+
+<p>
+  On the surface this is &ldquo;a segmentation repo&rdquo;. In practice three independent structures
+  are layered on top of one another, and untangling them is the main cost of onboarding:
+</p>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Layer</th><th>What it decides</th><th>Where it lives</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Data contract</strong></td>
+      <td>
+        What a training sample <em>is</em>: which labels are valid, how sparse foreground is
+        handled, and which keys a batch exposes to the model and loss.
+      </td>
+      <td><code>src/approach/unetbasic/data/dataset.py</code></td>
+    </tr>
+    <tr>
+      <td><strong>Modelling</strong></td>
+      <td>
+        The network, the auxiliary prediction heads, and the loss composition that trades off
+        voxel accuracy against topological correctness.
+      </td>
+      <td><code>models/</code>, <code>utils/losses.py</code></td>
+    </tr>
+    <tr>
+      <td><strong>Experiment configuration</strong></td>
+      <td>
+        Which of the above is active, with what weights, patch size, augmentation set and schedule.
+      </td>
+      <td><code>configs/</code> + <code>src/approach/*/configs/experiments/</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  The pages in this section walk each layer in turn. The single most useful thing to understand
+  first is the <a href="data-flow.html">data and label flow</a>: almost every naming decision
+  elsewhere in the codebase &mdash; <code>label_fg_bin</code>, <code>label_valid</code>,
+  <code>distance_unsigned</code> &mdash; is explained by the transform chain documented there.
+</p>
+
+<nav class="pager" aria-label="Section navigation"><a class="pager__prev" href="../index.html"><span class="pager__dir">&larr; Previous</span><span class="pager__title">Home</span></a><a class="pager__next" href="../architecture/system.html"><span class="pager__dir">Next &rarr;</span><span class="pager__title">System Design</span></a></nav>
+    </main>
+
+    <footer class="footer">
+      <span>Vesuvius Challenge 2025 &mdash; 3D CT papyrus surface segmentation.</span>
+      <span>Generated documentation &middot; <a href="../index.html">Back to overview</a></span>
+    </footer>
+  </div>
+</div>
+</body>
+</html>
